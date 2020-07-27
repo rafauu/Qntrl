@@ -11,8 +11,22 @@ import android.os.Bundle;
 import android.util.Log;
 import android.widget.TextView;
 
+import com.android.volley.Request;
+import com.android.volley.RequestQueue;
+import com.android.volley.Response;
+import com.android.volley.VolleyError;
+import com.android.volley.toolbox.StringRequest;
+import com.android.volley.toolbox.Volley;
+
 public class MainActivity extends AppCompatActivity
-                          implements SensorEventListener {
+        implements SensorEventListener {
+
+    private static final String TAG = "Something";
+    private final float[] accelerometerReading = new float[3];
+    private final float[] magnetometerReading = new float[3];
+    private final float[] rotationMatrix = new float[9];
+    private final float[] orientationAngles = new float[3];
+    private SensorManager sensorManager;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -20,13 +34,6 @@ public class MainActivity extends AppCompatActivity
         setContentView(R.layout.activity_main);
         sensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
     }
-
-    private SensorManager sensorManager;
-    private final float[] accelerometerReading = new float[3];
-    private final float[] magnetometerReading = new float[3];
-
-    private final float[] rotationMatrix = new float[9];
-    private final float[] orientationAngles = new float[3];
 
     protected void onPause() {
         super.onPause();
@@ -45,9 +52,31 @@ public class MainActivity extends AppCompatActivity
             sensorManager.registerListener(this, magneticField,
                     SensorManager.SENSOR_DELAY_NORMAL, SensorManager.SENSOR_DELAY_UI);
         }
-    }
 
-    private static final String TAG = "Something";
+        Thread serverRequestThread = new Thread() {
+            @Override
+            public void run() {
+                final String serverUrl = "http://10.0.0.8:80/";
+                final TextView sth = findViewById(R.id.otherText);
+                StringRequest stringRequest = new StringRequest(Request.Method.GET, serverUrl,
+                        new Response.Listener<String>() {
+                            @Override
+                            public void onResponse(String response) {
+                                sth.setText(response);
+                            }
+                        }, new Response.ErrorListener() {
+                            @Override
+                            public void onErrorResponse(VolleyError error) {
+                                sth.setText("That didn't work!");
+                            }
+                });
+
+                RequestQueue queue = Volley.newRequestQueue(MainActivity.this);
+                queue.add(stringRequest);
+            }
+        };
+        serverRequestThread.start();
+    }
 
     @Override
     public void onSensorChanged(SensorEvent event) {
@@ -64,12 +93,10 @@ public class MainActivity extends AppCompatActivity
         SensorManager.getRotationMatrix(rotationMatrix, null, accelerometerReading, magnetometerReading);
         SensorManager.getOrientation(rotationMatrix, orientationAngles);
 
-        TextView t = (TextView)findViewById(R.id.Magneto22);
-        t.setText(String.valueOf(orientationAngles[0]*180/3.1415));
+        TextView t = findViewById(R.id.Magneto22);
+        t.setText(String.valueOf(orientationAngles[0] * 180 / 3.1415));
     }
 
     @Override
-    public void onAccuracyChanged(Sensor sensor, int accuracy) {
-
-    }
+    public void onAccuracyChanged(Sensor sensor, int accuracy) {}
 }

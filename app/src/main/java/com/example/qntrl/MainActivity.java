@@ -1,5 +1,6 @@
 package com.example.qntrl;
 
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 
 import android.content.Context;
@@ -12,11 +13,13 @@ import android.util.Log;
 import android.widget.TextView;
 
 import com.android.volley.Request;
-import com.android.volley.RequestQueue;
 import com.android.volley.Response;
 import com.android.volley.VolleyError;
-import com.android.volley.toolbox.StringRequest;
+import com.android.volley.toolbox.JsonObjectRequest;
 import com.android.volley.toolbox.Volley;
+
+import org.json.JSONException;
+import org.json.JSONObject;
 
 public class MainActivity extends AppCompatActivity
         implements SensorEventListener {
@@ -58,21 +61,35 @@ public class MainActivity extends AppCompatActivity
             public void run() {
                 final String serverUrl = "http://10.0.0.8:80/";
                 final TextView sth = findViewById(R.id.otherText);
-                StringRequest stringRequest = new StringRequest(Request.Method.GET, serverUrl,
-                        new Response.Listener<String>() {
+
+                final JSONObject jsonObject = new JSONObject();
+                try {
+                    jsonObject.put("angle", orientationAngles[0] * 180 / 3.1415);
+                } catch (JSONException e) {
+                    e.printStackTrace();
+                }
+
+                final JsonObjectRequest jsonObjectRequest = new JsonObjectRequest(
+                        Request.Method.POST,
+                        serverUrl,
+                        jsonObject,
+                        new Response.Listener<JSONObject>() {
                             @Override
-                            public void onResponse(String response) {
-                                sth.setText(response);
+                            public void onResponse(JSONObject response) {
+                                try {
+                                    sth.setText(response.getString("id"));
+                                } catch (JSONException e) {
+                                    e.printStackTrace();
+                                }
                             }
                         }, new Response.ErrorListener() {
                             @Override
                             public void onErrorResponse(VolleyError error) {
-                                sth.setText("That didn't work!");
+                                error.printStackTrace();
                             }
                 });
 
-                RequestQueue queue = Volley.newRequestQueue(MainActivity.this);
-                queue.add(stringRequest);
+                Volley.newRequestQueue(MainActivity.this).add(jsonObjectRequest);
             }
         };
         serverRequestThread.start();

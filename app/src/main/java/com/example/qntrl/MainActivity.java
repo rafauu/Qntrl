@@ -32,6 +32,7 @@ public class MainActivity extends AppCompatActivity
     private final float[] rotationMatrix = new float[9];
     private final float[] orientationAngles = new float[3];
     private SensorManager sensorManager;
+    private float azimuth;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -58,7 +59,7 @@ public class MainActivity extends AppCompatActivity
 
                 final JSONObject jsonObject = new JSONObject();
                 try {
-                    jsonObject.put("angle", orientationAngles[0] * 180 / 3.1415);
+                    jsonObject.put("angle", azimuth);
                 } catch (JSONException e) {
                     e.printStackTrace();
                 }
@@ -121,10 +122,14 @@ public class MainActivity extends AppCompatActivity
         }
 
         SensorManager.getRotationMatrix(rotationMatrix, null, accelerometerReading, magnetometerReading);
-        SensorManager.getOrientation(rotationMatrix, orientationAngles);
+        float[] outGravity = new float[9];
+        SensorManager.remapCoordinateSystem(rotationMatrix, SensorManager.AXIS_X,SensorManager.AXIS_Z, outGravity);
+        SensorManager.getOrientation(outGravity, orientationAngles);
+        final float a = 0.3f;
+        azimuth = a * (orientationAngles[0] * 57.2957795f) + (1 - a) * azimuth;
 
         TextView t = findViewById(R.id.Magneto22);
-        t.setText(String.valueOf(orientationAngles[0] * 180 / 3.1415));
+        t.setText(String.valueOf(azimuth));
     }
 
     @Override

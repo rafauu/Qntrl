@@ -1,17 +1,20 @@
 package com.example.qntrl;
 
-import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 
 import android.content.Context;
+import android.content.Intent;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
+import android.net.Uri;
 import android.os.Bundle;
-import android.util.Log;
+import android.view.Menu;
+import android.view.MenuItem;
 import android.view.View;
 import android.widget.Button;
+import android.widget.PopupMenu;
 import android.widget.TextView;
 
 import com.android.volley.Request;
@@ -20,13 +23,14 @@ import com.android.volley.VolleyError;
 import com.android.volley.toolbox.JsonObjectRequest;
 import com.android.volley.toolbox.Volley;
 
+import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
 public class MainActivity extends AppCompatActivity
         implements SensorEventListener {
 
-    private static final String TAG = "Something";
+    private static final String TAG = "MainActivity";
     private final float[] accelerometerReading = new float[3];
     private final float[] magnetometerReading = new float[3];
     private final float[] rotationMatrix = new float[9];
@@ -70,8 +74,43 @@ public class MainActivity extends AppCompatActivity
                         jsonObject,
                         new Response.Listener<JSONObject>() {
                             @Override
-                            public void onResponse(JSONObject response) {
+                            public void onResponse(final JSONObject response) {
                                 sth.setText(response.toString());
+                                findViewById(R.id.devicesButton).setOnClickListener(new View.OnClickListener() {
+                                    @Override
+                                    public void onClick(View view) {
+                                        PopupMenu menu = new PopupMenu(getApplicationContext(), view);
+                                        if (response.has("id")) {
+                                            try {
+                                                JSONArray devices = response.getJSONArray("id");
+                                                for(int i=0; i<devices.length(); ++i) {
+                                                    menu.getMenu().add(Menu.NONE, i+1, i+1, devices.get(i).toString());
+                                                }
+                                            } catch (JSONException e) {
+                                                e.printStackTrace();
+                                            }
+                                        }
+                                        menu.show();
+                                        menu.setOnMenuItemClickListener(new PopupMenu.OnMenuItemClickListener() {
+                                            @Override
+                                            public boolean onMenuItemClick(MenuItem menuItem) {
+                                                if (menuItem.toString().equals("device2")) {
+                                                    String url = "http://www.example.com";
+                                                    Intent i = new Intent(Intent.ACTION_VIEW);
+                                                    i.setData(Uri.parse(url));
+                                                    startActivity(i);
+                                                }
+                                                else if (menuItem.toString().equals("device3")) {
+                                                    String url = "http://www.google.com";
+                                                    Intent i = new Intent(Intent.ACTION_VIEW);
+                                                    i.setData(Uri.parse(url));
+                                                    startActivity(i);
+                                                }
+                                                return true;
+                                            }
+                                        });
+                                    }
+                                });
                             }
                         }, new Response.ErrorListener() {
                     @Override

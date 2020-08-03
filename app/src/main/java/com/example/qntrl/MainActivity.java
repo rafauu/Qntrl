@@ -71,11 +71,7 @@ public class MainActivity extends AppCompatActivity
                         new Response.Listener<JSONObject>() {
                             @Override
                             public void onResponse(JSONObject response) {
-                                try {
-                                    sth.setText(response.getString("id"));
-                                } catch (JSONException e) {
-                                    e.printStackTrace();
-                                }
+                                sth.setText(response.toString());
                             }
                         }, new Response.ErrorListener() {
                     @Override

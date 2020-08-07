@@ -10,6 +10,7 @@ import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
 import android.net.Uri;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
@@ -31,12 +32,11 @@ public class MainActivity extends AppCompatActivity
         implements SensorEventListener {
 
     private static final String TAG = "MainActivity";
-    private final float[] accelerometerReading = new float[3];
-    private final float[] magnetometerReading = new float[3];
-    private final float[] rotationMatrix = new float[9];
-    private final float[] orientationAngles = new float[3];
+    private final float[] newSensorReading = new float[3];
     private SensorManager sensorManager;
-    private float azimuth;
+    private double azimuthWithoutFilter;
+    private double azimuthSmallFilter;
+    private double azimuthBigFilter;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -63,7 +63,8 @@ public class MainActivity extends AppCompatActivity
 
                 final JSONObject jsonObject = new JSONObject();
                 try {
-                    jsonObject.put("angle", azimuth);
+                    jsonObject.put("angle", azimuthSmallFilter);
+//                    jsonObject.put("angle", azimuth);
                 } catch (JSONException e) {
                     e.printStackTrace();
                 }
@@ -132,39 +133,42 @@ public class MainActivity extends AppCompatActivity
 
     protected void onResume() {
         super.onResume();
-        Sensor accelerometer = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
-        if (accelerometer != null) {
-            sensorManager.registerListener(this, accelerometer,
-                    SensorManager.SENSOR_DELAY_NORMAL, SensorManager.SENSOR_DELAY_UI);
-        }
-        Sensor magneticField = sensorManager.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD);
-        if (magneticField != null) {
-            sensorManager.registerListener(this, magneticField,
+
+        Sensor newSensor = sensorManager.getDefaultSensor(Sensor.TYPE_ROTATION_VECTOR);
+        if (newSensor != null) {
+            sensorManager.registerListener(this, newSensor,
                     SensorManager.SENSOR_DELAY_NORMAL, SensorManager.SENSOR_DELAY_UI);
         }
     }
 
     @Override
     public void onSensorChanged(SensorEvent event) {
-        if (event.sensor.getType() == Sensor.TYPE_ACCELEROMETER) {
-            System.arraycopy(event.values, 0, accelerometerReading,
-                    0, accelerometerReading.length);
-        } else if (event.sensor.getType() == Sensor.TYPE_MAGNETIC_FIELD) {
-            System.arraycopy(event.values, 0, magnetometerReading,
-                    0, magnetometerReading.length);
+        if (event.sensor.getType() == Sensor.TYPE_ROTATION_VECTOR) {
+            System.arraycopy(event.values, 0, newSensorReading,
+                    0, newSensorReading.length);
         } else {
             return;
         }
 
-        SensorManager.getRotationMatrix(rotationMatrix, null, accelerometerReading, magnetometerReading);
-        float[] outGravity = new float[9];
-        SensorManager.remapCoordinateSystem(rotationMatrix, SensorManager.AXIS_X,SensorManager.AXIS_Z, outGravity);
-        SensorManager.getOrientation(outGravity, orientationAngles);
-        final float a = 0.3f;
-        azimuth = a * (orientationAngles[0] * 57.2957795f) + (1 - a) * azimuth;
+        float[] rotationV = new float[16];
+        SensorManager.getRotationMatrixFromVector(rotationV, newSensorReading);
+
+        float[] orientationValuesV = new float[3];
+        SensorManager.getOrientation(rotationV, orientationValuesV);
+
+        final float aSmall = 0.3f;
+        final float aVerySmall = 0.1f;
+
+        double yaw = orientationValuesV[0] * 180 / Math.PI;
+
+        azimuthWithoutFilter = yaw;
+        azimuthSmallFilter = aSmall * (yaw) + (1 - aSmall) * azimuthSmallFilter;
+        azimuthBigFilter = aVerySmall * (yaw) + (1 - aVerySmall) * azimuthBigFilter;
+
+        Log.d(TAG, String.valueOf(azimuthWithoutFilter) + ";" + String.valueOf(azimuthSmallFilter) + ";" + String.valueOf(azimuthBigFilter));
 
         TextView t = findViewById(R.id.Magneto22);
-        t.setText(String.valueOf(azimuth));
+        t.setText(String.valueOf(String.valueOf(azimuthWithoutFilter) + '\n' + String.valueOf(azimuthSmallFilter) + '\n' + String.valueOf(azimuthBigFilter)));
     }
 
     @Override
